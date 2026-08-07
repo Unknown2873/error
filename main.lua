@@ -1,6 +1,4 @@
 -- TODO: add totem upgrader
-warn("Error404: script started")
-print("Error404: script started")
 
 local function ShowExecutionIndicator()
     pcall(function()
@@ -1014,10 +1012,6 @@ local LucideIcons = {
     ["package-open"] = "rbxassetid://107788271669717",
     ["wrench"]       = "rbxassetid://72256665561111",
     ["settings"]     = "rbxassetid://80569709228497",
-    ["blueprints"]   = "rbxassetid://92880735001078",
-    ["preview"]      = "rbxassetid://102434991552616",
-    ["island-edits"] = "rbxassetid://88877559549936",
-    ["movement"]     = "rbxassetid://101926214741105",
 }
 
 local function GetIcon(name)
@@ -3205,87 +3199,61 @@ end
 task.defer(createrequiredblocksui)
 task.defer(createmovementui)
 
--- popup that contains the extra sub-tabs (Blueprints, Preview, Island Edits, Movement)
+-- simpler More UI: popup that lists saved blueprints and lets the player pick one
 local function createMoreUI()
     pcall(function()
         if Cache.MoreUI and Cache.MoreUI.Parent then Cache.MoreUI:Destroy() end
     end)
-    local ui, frame = buildFrameBase("IVM_MoreUI", UDim2.new(0,420,0,320), UDim2.new(0.5,-210,0.5,-160))
+    local ui, frame = buildFrameBase("IVM_MoreUI", UDim2.new(0,360,0,300), UDim2.new(0.5,-180,0.5,-150))
     frame.Visible = true
 
-    local Sidebar = Instance.new("Frame")
-    Sidebar.Name = "Sidebar"
-    Sidebar.Size = UDim2.new(0,120,1,0)
-    Sidebar.Position = UDim2.new(0,0,0,0)
-    Sidebar.BackgroundColor3 = UI.Colors.Sidebar
-    Sidebar.BorderSizePixel = 0
-    Sidebar.Parent = frame
-    Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0,6)
+    local title = addTitleBar(frame, "More UI - Blueprints", Color3.fromRGB(30,30,38))
 
-    local Content = Instance.new("Frame")
-    Content.Name = "Content"
-    Content.Size = UDim2.new(1,-120,1,0)
-    Content.Position = UDim2.new(0,120,0,0)
-    Content.BackgroundColor3 = UI.Colors.Element
-    Content.BorderSizePixel = 0
-    Content.Parent = frame
-    Instance.new("UICorner", Content).CornerRadius = UDim.new(0,6)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1,-16,1,-60)
+    scroll.Position = UDim2.new(0,8,0,42)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 6
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.Parent = frame
+    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,6)
 
-    local pages = {}
-    local function makePage(name)
-        local p = Instance.new("Frame")
-        p.Name = name:gsub('%s+','') .. "Page"
-        p.Size = UDim2.new(1,0,1,0)
-        p.Position = UDim2.new(0,0,0,0)
-        p.BackgroundTransparency = 1
-        p.Parent = Content
-        p.Visible = false
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1,-20,0,24)
-        lbl.Position = UDim2.new(0,10,0,8)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = name
-        lbl.TextColor3 = UI.Colors.Text
-        lbl.Font = UI.FontBold
-        lbl.TextSize = 14
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.Parent = p
-        pages[name] = p
-        return p
-    end
+    local list = Instance.new("Frame")
+    list.Size = UDim2.new(1,0,0,0)
+    list.BackgroundTransparency = 1
+    list.Parent = scroll
+    local layout = Instance.new("UIListLayout", list)
+    layout.Padding = UDim.new(0,6)
 
-    local function activatePage(name)
-        for k,v in pairs(pages) do pcall(function() v.Visible = false end) end
-        if pages[name] then pages[name].Visible = true end
-    end
-
-    local tabNames = {"Blueprints","Preview","Island Edits","Movement"}
-    for i, name in ipairs(tabNames) do
+    local bps = refreshblueprints() or {"None"}
+    for i=1,#bps do
+        local name = bps[i]
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1,-16,0,40)
-        btn.Position = UDim2.new(0,8,0,8 + (i-1) * 45)
+        btn.Size = UDim2.new(1,-12,0,36)
         btn.BackgroundColor3 = UI.Colors.Element
         btn.BorderSizePixel = 0
         btn.Text = name
         btn.Font = UI.Font
         btn.TextColor3 = UI.Colors.Text
         btn.TextSize = 14
-        btn.Parent = Sidebar
+        btn.Parent = list
+        local pad = Instance.new("UIPadding", btn); pad.PaddingLeft = UDim.new(0,8)
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
-        makePage(name)
-
         btn.MouseButton1Click:Connect(function()
-            activatePage(name)
-            -- open existing movement UI when Movement tab clicked
-            if name == "Movement" then
-                State.ShowMovementUI = true
-                if Cache.MovementFrame then Cache.MovementFrame.Visible = true end
+            State.SelectedBlueprint = name
+            Window:Notify({Title="Blueprint", Content="Selected: "..tostring(name), Duration=2})
+            -- attempt to load immediately
+            local ok, err = pcall(function() loadblueprint(name) end)
+            if not ok then Window:Notify({Title="Error", Content=tostring(err), Duration=3}) end
+            -- sync Build tab dropdown if it exists
+            if BlueprintDD and BlueprintDD.Refresh then
+                pcall(function() BlueprintDD:Refresh(refreshblueprints(), name) end)
             end
         end)
     end
 
-    activatePage("Blueprints")
     Cache.MoreUI = frame
     return frame
 end
@@ -3294,17 +3262,13 @@ end
 local VendingTab     = Window:CreateTab("Vending",      GetIcon("store"),         1)
 local ChestTab       = Window:CreateTab("Chest",        GetIcon("archive"),       2)
 local ATMTab         = Window:CreateTab("ATM",          GetIcon("landmark"),      3)
-local BlueprintsTab  = Window:CreateTab("Blueprints",   GetIcon("blueprints"),    4)
-local PreviewTab     = Window:CreateTab("Preview",      GetIcon("preview"),       5)
-local BuildTab       = Window:CreateTab("Build",        GetIcon("construction"),  6)
-local IslandEditsTab = Window:CreateTab("Island Edits", GetIcon("island-edits"),  7)
-local MovementTab    = Window:CreateTab("Movement",     GetIcon("movement"),      8)
-local SniperTab      = Window:CreateTab("Sniper",       GetIcon("crosshair"),     9)
-local CombatTab      = Window:CreateTab("Combat",       GetIcon("swords"),       10)
-local FarmingTab     = Window:CreateTab("Farming",      GetIcon("sprout"),       11)
-local OpeningTab     = Window:CreateTab("Opening",      GetIcon("package-open"), 12)
-local MiscTab        = Window:CreateTab("Misc",         GetIcon("wrench"),       13)
-local SettingsTab    = Window:CreateTab("Settings",     GetIcon("settings"),     14)
+local BuildTab       = Window:CreateTab("Build",        GetIcon("construction"),  4)
+local SniperTab      = Window:CreateTab("Sniper",       GetIcon("crosshair"),     5)
+local CombatTab      = Window:CreateTab("Combat",       GetIcon("swords"),        6)
+local FarmingTab     = Window:CreateTab("Farming",      GetIcon("sprout"),        7)
+local OpeningTab     = Window:CreateTab("Opening",      GetIcon("package-open"),  8)
+local MiscTab        = Window:CreateTab("Misc",         GetIcon("wrench"),        9)
+local SettingsTab    = Window:CreateTab("Settings",     GetIcon("settings"),     10)
 print("Error404: all tabs created")
 
 -- a dropdown menu where u can pick multiple things
