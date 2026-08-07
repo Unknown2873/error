@@ -1,6 +1,4 @@
--- add comments to some things explaining what they do but keep similar grammar to other comments same style as old comments no
--- credits @pookiepepelss @.ftgs
--- da best islands script!
+
 
 -- TODO: add totem upgrader
 
