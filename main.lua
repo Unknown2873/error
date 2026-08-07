@@ -1,33 +1,5 @@
 -- TODO: add totem upgrader
 
-local function ShowExecutionIndicator()
-    pcall(function()
-        local gui = (gethui and gethui() or game:GetService("CoreGui"))
-        if not gui then return end
-        local frame = Instance.new("Frame")
-        frame.Name = "Error404ExecutionIndicator"
-        frame.Size = UDim2.new(0,240,0,36)
-        frame.Position = UDim2.new(0,0,0,0)
-        frame.BackgroundColor3 = Color3.fromRGB(30,30,36)
-        frame.BackgroundTransparency = 0.15
-        frame.BorderSizePixel = 0
-        frame.ZIndex = 10000
-        frame.Parent = gui
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1,1,1,1)
-        label.BackgroundTransparency = 1
-        label.Text = "Error404 script started"
-        label.TextColor3 = Color3.fromRGB(255,255,255)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 13
-        label.Parent = frame
-        task.delay(5, function()
-            if frame and frame.Parent then pcall(function() frame:Destroy() end) end
-        end)
-    end)
-end
-ShowExecutionIndicator()
-
 -- folder stuff
 if isfolder and makefolder then
     if not isfolder("Error404") then makefolder("Error404") end
@@ -87,7 +59,6 @@ local Mouse = LocalPlayer:GetMouse()
 
 -- builds the main window and its draggable behaviour
 function Library:Create(titleText)
-    print("Error404: Library.Create start", titleText)
     local ActiveConnections, ActiveLoops = {}, {}
     local function AddConn(Conn) table.insert(ActiveConnections, Conn); return Conn end
     local function AddLoop(Thread) table.insert(ActiveLoops, Thread); return Thread end
@@ -391,11 +362,9 @@ function Library:Create(titleText)
     function Window:SetHovering(s) IsHovering = s end
 
     -- creates a new tab and returns an object with methods to add ui elements
-    function Window:CreateTab(Name, Icon, Order)
-        print("Error404: CreateTab", Name, Icon, Order)
-        local sanitizedName = Name:gsub("%s+", "")
+    function Window:CreateTab(Name, Icon)
         local Page = Instance.new("ScrollingFrame")
-        Page.Name = sanitizedName .. "Page"
+        Page.Name = Name .. "Page"
         Page.Size = UDim2.new(1,-20,1,-10)
         Page.Position = UDim2.new(0,10,0,10)
         Page.BackgroundTransparency = 1
@@ -403,7 +372,7 @@ function Library:Create(titleText)
         Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
         Page.ScrollBarImageColor3 = Color3.fromRGB(60,60,65)
         Page.BorderSizePixel = 0
-        Page.Visible = false
+Page.Visible = false
         Page.BackgroundTransparency = 1
         Page.Parent = ContentArea
 
@@ -417,8 +386,7 @@ function Library:Create(titleText)
         PagePadding.Parent = Page
 
         local TabButton = Instance.new("TextButton")
-        TabButton.Name = sanitizedName .. "Tab"
-        TabButton.LayoutOrder = Order or #Tabs + 1
+        TabButton.Name = Name .. "Tab"
         TabButton.Size = UDim2.new(1,-20,0,42)
         TabButton.BackgroundColor3 = UI.Colors.Sidebar
         TabButton.BackgroundTransparency = 1
@@ -468,17 +436,11 @@ function Library:Create(titleText)
             Page.Position = UDim2.new(0,10,0,40)
             TweenService:Create(Page, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
                 { Position = UDim2.new(0,10,0,10) }):Play()
-            print("Error404: Activating tab", Name)
             SetTabColor(true)
-            -- Use layout-order + known constants rather than AbsolutePosition to avoid
-            -- timing/layout race conditions on mobile/executor environments.
-            local buttonIndex = TabButton.LayoutOrder or 1
-            local buttonHeight = 42
-            local listPadding = 5
-            local buttonRelY = (buttonIndex - 1) * (buttonHeight + listPadding)
-            local targetY_normal = buttonRelY + (buttonHeight - 24) / 2
-            local targetY_stretch = buttonRelY + (buttonHeight - 32) / 2
-            if FirstTab then
+            local buttonRelY = TabButton.AbsolutePosition.Y - TabList.AbsolutePosition.Y
+            local targetY_normal = buttonRelY + (TabButton.AbsoluteSize.Y - 24) / 2
+            local targetY_stretch = buttonRelY + (TabButton.AbsoluteSize.Y - 32) / 2
+if FirstTab then
                 ActiveTabIndicator.Position = UDim2.new(0,0,0,targetY_normal)
             else
                 -- Pulse animation: stretch longer then return to normal
@@ -499,21 +461,7 @@ function Library:Create(titleText)
         TabButton.MouseButton1Click:Connect(Activate)
         table.insert(Pages, Page)
         table.insert(Tabs, { Btn = TabButton, Icon = TabIcon })
-        if FirstTab then
-            Page.Visible = true
-            CurrentTab = TabButton
-            SetTabColor(true)
-            task.spawn(function()
-                task.wait(0.05)
-                -- compute indicator position using LayoutOrder instead of AbsolutePosition
-                local buttonIndex = TabButton.LayoutOrder or 1
-                local buttonHeight = 42
-                local listPadding = 5
-                local buttonRelY = (buttonIndex - 1) * (buttonHeight + listPadding)
-                ActiveTabIndicator.Position = UDim2.new(0,0,0,buttonRelY + (buttonHeight - 24) / 2)
-            end)
-            FirstTab = false
-        end
+        if FirstTab then task.defer(Activate); Activate(); FirstTab = false end -- activate the first tab right away
 
         local TabObj = { Page = Page }
 
@@ -994,7 +942,6 @@ local Open = false
     Window.ActiveConnections = ActiveConnections
     Window.ActiveLoops = ActiveLoops
     Window.ScreenGui = ScreenGui
-    print("Error404: Library.Create returning Window")
     
     return Window
 end
@@ -1079,7 +1026,6 @@ local Settings = {
     PlowRadius          = 10,
     TreeAuraRadius      = 50,
     TreeTweenSpeed      = 25,
-    BuildRadius         = 150,
 }
 
 -- bp logger
@@ -1156,10 +1102,6 @@ SniperItemNames = {}, SniperMaxPrice = "", SniperMaxBuy = "", SniperBuyAny = fal
     BlueprintReplaceSource = "", BlueprintReplaceTarget = "", BlueprintReplacements = {},
     BlueprintPos1 = nil, BlueprintPos2 = nil,
     PreviewQuality = "Quality",
-    BlueprintPaused = false,
-    BlockPlacingESPEnabled = true,
-    CurrentBuildTargetKey = nil,
-    CurrentBuildTargetPos = nil,
     -- Opening
     OpeningEnabled = false, ChestOpenerEnabled = false, ChestWalkEnabled = false,
     OpenerGen = 0, LastOpeningTime = 0,
@@ -1170,7 +1112,6 @@ SniperItemNames = {}, SniperMaxPrice = "", SniperMaxBuy = "", SniperBuyAny = fal
     InviteUsername = "", SelectionModeEnabled = false, LastChangedRadius = "Vending",
     IsCleaningUp = false, IsSilentRefresh = false,
     ShowRequiredBlocksUI = false, ShowMovementUI = false, CircleEnabled = false,
-    ManageSelectedBlueprint = "None",
     LabelsAccum = 0,
     VendingLabelsEnabled = false, ChestLabelsEnabled = false,
 }
@@ -1195,7 +1136,6 @@ local Cache = {
     LastPreviewCFrame = nil, BlueprintRegionHL = nil, BlueprintRegionSB = nil,
     BlueprintRegionPart = nil, BlueprintFiles = nil,
     BlueprintPlaced = {}, BlueprintPlacedCount = 0,
-    BuildTargetESP = nil,
     -- Combat
     CombatAnims = {}, CombatAnimInstances = {},
     CombatThread = nil,
@@ -1825,14 +1765,8 @@ end
 
 -- checks if theres already a block at that spot
 local function filledcheck(Position)
-    local params = OverlapParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    if LocalPlayer.Character then
-        params.FilterDescendantsInstances = {LocalPlayer.Character}
-    end
-    -- Search a 3x3x3 box centered on the expected block position
-    local parts = Workspace:GetPartBoundsInBox(CFrame.new(Position), Vector3.new(3, 3, 3), params)
-    for _, v in ipairs(parts) do
+    local Parts = Workspace:FindPartsInRegion3(Region3.new(Position, Position), nil, 50)
+    for _, v in ipairs(Parts) do
         local Parent = v.Parent
         if Parent then
             if Parent.Name == "Blocks" then return true, v end
@@ -2602,61 +2536,6 @@ local function loadblueprintstate()
     return data
 end
 
--- saves scan & sync progress for a blueprint
-local function savesyncstate()
-    if not (writefile and isfolder and makefolder) then return end
-    if not Cache.LoadedBlueprintData or not State.SelectedBlueprint or State.SelectedBlueprint == "None" then return end
-    local state = {
-        blueprintName = State.SelectedBlueprint,
-        placedBlocks = Cache.BlueprintPlaced,
-        placedCount = Cache.BlueprintPlacedCount,
-        anchorCFrame = Cache.BlueprintAnchor and {Cache.BlueprintAnchor:GetComponents()} or nil,
-        anchorLocked = Cache.BlueprintAnchorLocked,
-        previewOffset = {State.BlueprintPreviewOffset.X, State.BlueprintPreviewOffset.Y, State.BlueprintPreviewOffset.Z},
-        previewRotation = State.BlueprintPreviewRotationY,
-    }
-    local folder = "Error404/Blueprints"
-    if not isfolder(folder) then makefolder(folder) end
-    local filename = folder .. "/" .. State.SelectedBlueprint .. "_sync.json"
-    local ok, encoded = pcall(function() return HttpService:JSONEncode(state) end)
-    if ok then writefile(filename, encoded) end
-end
-
--- loads scan & sync progress for a blueprint
-local function loadsyncstate()
-    if not (isfile and readfile) then return end
-    if not State.SelectedBlueprint or State.SelectedBlueprint == "None" then return end
-    local filename = "Error404/Blueprints/" .. State.SelectedBlueprint .. "_sync.json"
-    if not isfile(filename) then return end
-    local ok, data = pcall(function() return HttpService:JSONDecode(readfile(filename)) end)
-    if not ok then return end
-    if data.placedBlocks then
-        Cache.BlueprintPlaced = data.placedBlocks
-        Cache.BlueprintPlacedCount = data.placedCount or 0
-    end
-    -- Restore exact anchor so posKeys match between sessions
-    if data.anchorCFrame then
-        Cache.BlueprintAnchor = CFrame.new(unpack(data.anchorCFrame))
-        Cache.BlueprintAnchorLocked = data.anchorLocked
-    end
-    if data.previewOffset then
-        State.BlueprintPreviewOffset = Vector3.new(unpack(data.previewOffset))
-    end
-    if data.previewRotation then
-        State.BlueprintPreviewRotationY = data.previewRotation
-    end
-    if Cache.BuildProgressLabel and Cache.LoadedBlueprintData then
-        Cache.BuildProgressLabel.Text = Cache.BlueprintPlacedCount .. " / " .. #Cache.LoadedBlueprintData .. " blocks"
-    end
-end
-
--- deletes saved sync for a blueprint
-local function deletesyncstate(name)
-    if not (isfile and delfile) then return end
-    local filename = "Error404/Blueprints/" .. (name or State.SelectedBlueprint) .. "_sync.json"
-    if isfile(filename) then delfile(filename) end
-end
-
 -- build progress UI
 local function createbuildprogressui()
     if Cache.BuildProgressUI then return end
@@ -2777,8 +2656,6 @@ local function loadblueprint(name)
         local total = #Cache.LoadedBlueprintData
         Cache.BuildProgressLabel.Text = tostring(Cache.BlueprintPlacedCount) .. " / " .. total .. " blocks"
     end
-    -- Auto-load saved sync if available
-    task.defer(loadsyncstate)
 end
 
 -- functions for chopping down trees
@@ -2938,10 +2815,7 @@ end)
 task.spawn(function() task.wait(1); updateBlocksFolder() end)
 
 -- setting up the main window
-print("Error404: before Library.Create")
 local Window = Library:Create("Error 404's")
-print("Error404: after Library.Create", tostring(Window))
-warn("Error404: Window created")
 Window:Notify({ Title = "Error 404's", Content = "Thanks for choosing Error 404's.", Duration = 3 })
 
 -- Toggle UI button
@@ -3103,7 +2977,7 @@ end
 local function createmovementui()
     if MovementUI then MovementUI:Destroy() end
     local ui, frame = buildFrameBase("IVM_Movement",
-        UDim2.new(0,220,0,340), UDim2.new(1,-230,0.5,-170))
+        UDim2.new(0,220,0,300), UDim2.new(1,-230,0.5,-150))
     frame.Visible = State.ShowMovementUI
 
     local titleBar = addTitleBar(frame, "Blueprint Movement", Color3.fromRGB(30,30,38))
@@ -3146,44 +3020,6 @@ local function createmovementui()
         Cache.BlueprintAnchor = nil; Cache.BlueprintAnchorLocked = false
         Window:Notify({Title="Preview", Content="Position reset.", Duration=2})
     end)
-    makebtn("Snap to Pos", UDim2.new(0,10, 0,175), function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local pos = hrp.Position
-            local bs = 3
-
-            -- Calculate blueprint center offset so the visual center lands on the character
-            local centerOffset = Vector3.new(0, 0, 0)
-            if Cache.LoadedBlueprintData and #Cache.LoadedBlueprintData > 0 then
-                local minX, minY, minZ = math.huge, math.huge, math.huge
-                local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
-                for _, bd in ipairs(Cache.LoadedBlueprintData) do
-                    local cf = parseBlueprintCFrame(bd.cframe)
-                    local p = cf.Position
-                    minX = math.min(minX, p.X); maxX = math.max(maxX, p.X)
-                    minY = math.min(minY, p.Y); maxY = math.max(maxY, p.Y)
-                    minZ = math.min(minZ, p.Z); maxZ = math.max(maxZ, p.Z)
-                end
-                centerOffset = Vector3.new((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2)
-            end
-
-            -- Align to grid and offset by blueprint center so the center sits on the player
-            local sx = math.floor(pos.X / bs) * bs + 2.5 - centerOffset.X
-            local sy = math.floor(pos.Y / bs) * bs + 1.5 - centerOffset.Y
-            local sz = math.floor(pos.Z / bs) * bs + 2.5 - centerOffset.Z
-
-            Cache.BlueprintAnchor = CFrame.new(Vector3.new(sx, sy, sz))
-            Cache.BlueprintAnchorLocked = true
-            State.BlueprintPreviewOffset = Vector3.new(0, 0, 0)
-            State.BlueprintPreviewRotationY = 0
-            Cache.LastPreviewCFrame = nil
-
-            Window:Notify({Title="Preview", Content="Snapped to your position.", Duration=2})
-        else
-            Window:Notify({Title="Error", Content="Character not found.", Duration=2})
-        end
-    end)
 
     local hint = Instance.new("TextLabel"); hint.Name = "Hint"
     hint.Size = UDim2.new(1,-10,0,20); hint.Position = UDim2.new(0,5,1,-25)
@@ -3199,77 +3035,17 @@ end
 task.defer(createrequiredblocksui)
 task.defer(createmovementui)
 
--- simpler More UI: popup that lists saved blueprints and lets the player pick one
-local function createMoreUI()
-    pcall(function()
-        if Cache.MoreUI and Cache.MoreUI.Parent then Cache.MoreUI:Destroy() end
-    end)
-    local ui, frame = buildFrameBase("IVM_MoreUI", UDim2.new(0,360,0,300), UDim2.new(0.5,-180,0.5,-150))
-    frame.Visible = true
-
-    local title = addTitleBar(frame, "More UI - Blueprints", Color3.fromRGB(30,30,38))
-
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1,-16,1,-60)
-    scroll.Position = UDim2.new(0,8,0,42)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 6
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.Parent = frame
-    Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,6)
-
-    local list = Instance.new("Frame")
-    list.Size = UDim2.new(1,0,0,0)
-    list.BackgroundTransparency = 1
-    list.Parent = scroll
-    local layout = Instance.new("UIListLayout", list)
-    layout.Padding = UDim.new(0,6)
-
-    local bps = refreshblueprints() or {"None"}
-    for i=1,#bps do
-        local name = bps[i]
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1,-12,0,36)
-        btn.BackgroundColor3 = UI.Colors.Element
-        btn.BorderSizePixel = 0
-        btn.Text = name
-        btn.Font = UI.Font
-        btn.TextColor3 = UI.Colors.Text
-        btn.TextSize = 14
-        btn.Parent = list
-        local pad = Instance.new("UIPadding", btn); pad.PaddingLeft = UDim.new(0,8)
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-
-        btn.MouseButton1Click:Connect(function()
-            State.SelectedBlueprint = name
-            Window:Notify({Title="Blueprint", Content="Selected: "..tostring(name), Duration=2})
-            -- attempt to load immediately
-            local ok, err = pcall(function() loadblueprint(name) end)
-            if not ok then Window:Notify({Title="Error", Content=tostring(err), Duration=3}) end
-            -- sync Build tab dropdown if it exists
-            if BlueprintDD and BlueprintDD.Refresh then
-                pcall(function() BlueprintDD:Refresh(refreshblueprints(), name) end)
-            end
-        end)
-    end
-
-    Cache.MoreUI = frame
-    return frame
-end
-
 -- setting up all the tabs on the side
-local VendingTab     = Window:CreateTab("Vending",      GetIcon("store"),         1)
-local ChestTab       = Window:CreateTab("Chest",        GetIcon("archive"),       2)
-local ATMTab         = Window:CreateTab("ATM",          GetIcon("landmark"),      3)
-local BuildTab       = Window:CreateTab("Build",        GetIcon("construction"),  4)
-local SniperTab      = Window:CreateTab("Sniper",       GetIcon("crosshair"),     5)
-local CombatTab      = Window:CreateTab("Combat",       GetIcon("swords"),        6)
-local FarmingTab     = Window:CreateTab("Farming",      GetIcon("sprout"),        7)
-local OpeningTab     = Window:CreateTab("Opening",      GetIcon("package-open"),  8)
-local MiscTab        = Window:CreateTab("Misc",         GetIcon("wrench"),        9)
-local SettingsTab    = Window:CreateTab("Settings",     GetIcon("settings"),     10)
-print("Error404: all tabs created")
+local VendingTab  = Window:CreateTab("Vending",  GetIcon("store"))
+local ChestTab    = Window:CreateTab("Chest",    GetIcon("archive"))
+local ATMTab      = Window:CreateTab("ATM",      GetIcon("landmark"))
+local BuildTab    = Window:CreateTab("Build",    GetIcon("construction"))
+local SniperTab   = Window:CreateTab("Sniper",   GetIcon("crosshair"))
+local CombatTab   = Window:CreateTab("Combat",   GetIcon("swords"))
+local FarmingTab  = Window:CreateTab("Farming",  GetIcon("sprout"))
+local OpeningTab  = Window:CreateTab("Opening",  GetIcon("package-open"))
+local MiscTab     = Window:CreateTab("Misc",     GetIcon("wrench"))
+local SettingsTab = Window:CreateTab("Settings", GetIcon("settings"))
 
 -- a dropdown menu where u can pick multiple things
 local function CreateMultiDropdown(tabObj, props)
@@ -3465,9 +3241,6 @@ VendingTab:CreateDivider()
 VendingTab:CreateInput({ Name="Item Amount", PlaceholderText="e.g. 100", Callback=function(v) State.ItemAmountValue = v end})
 VendingTab:CreateDropdown({ Name="Item Mode", Options={"Deposit","Withdraw","Deposit (Max)","Withdraw (Max)"}, CurrentOption={"Deposit"}, Callback=function(v) State.ItemMode = type(v) == "table" and v[1] or v end})
 VendingTab:CreateDivider()
-    VendingTab:CreateButton({ Name="More UI", Callback=function()
-        createMoreUI()
-    end})
 VendingTab:CreateButton({ Name="Perform Item Action", Callback=function()
     task.spawn(function()
         local item = State.SelectedVendItem; local amount = tonumber(State.ItemAmountValue)
@@ -4367,6 +4140,12 @@ BlueprintDD = BuildTab:CreateDropdown({ Name="Select Blueprint", Options=refresh
         end)
     end
 end})
+BuildTab:CreateButton({ Name="Refresh Blueprints", Callback=function()
+    if BlueprintDD then
+        BlueprintDD:Refresh(refreshblueprints(), State.SelectedBlueprint)
+        Window:Notify({Title="Refreshed", Content="Blueprint list updated.", Duration=2})
+    end
+end})
 BuildTab:CreateDivider()
 BuildTab:CreateToggle({ Name="Region Selection (Alt+Click)", CurrentValue=false, Callback=function(v)
     State.BlueprintSelectionMode = v
@@ -4605,76 +4384,11 @@ BuildTab:CreateToggle({ Name="Auto Build Blueprint", CurrentValue=false, Callbac
     if v then
         createbuildprogressui()
         if Cache.BuildProgressMainFrame then Cache.BuildProgressMainFrame.Visible = true end
-
-        -- Create red ESP marker for build target (through-walls)
-        if State.BlockPlacingESPEnabled and (not Cache.BuildTargetESP or not Cache.BuildTargetESP.Parent) then
-            local esp = Instance.new("Part")
-            esp.Name = "BuildTargetESP"
-            esp.Size = Vector3.new(3.2, 3.2, 3.2)
-            esp.Anchored = true
-            esp.CanCollide = false
-            esp.CanQuery = false
-            esp.CanTouch = false
-            esp.Transparency = 1 -- base part invisible; adornments do the visuals
-            esp.Color = Color3.fromRGB(255, 0, 0)
-            esp.Material = Enum.Material.Neon
-            esp.Parent = Workspace -- world-space so CFrame works properly
-
-            -- BillboardGui red dot (always renders on top)
-            local billboard = Instance.new("BillboardGui")
-            billboard.Name = "ESP_Billboard"
-            billboard.Size = UDim2.new(0, 28, 0, 28)
-            billboard.AlwaysOnTop = true
-            billboard.StudsOffset = Vector3.new(0, 0, 0)
-            billboard.Parent = esp
-
-            local frame = Instance.new("Frame")
-            frame.Name = "ESP_Frame"
-            frame.Size = UDim2.new(1, 0, 1, 0)
-            frame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            frame.BorderSizePixel = 0
-            frame.Parent = billboard
-
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(1, 0)
-            corner.Parent = frame
-
-            local stroke = Instance.new("UIStroke")
-            stroke.Color = Color3.fromRGB(255, 255, 255)
-            stroke.Thickness = 2.5
-            stroke.Parent = frame
-
-            -- Highlight glow through walls
-            local hl = Instance.new("Highlight")
-            hl.Name = "ESP_Highlight"
-            hl.Adornee = esp
-            hl.FillColor = Color3.fromRGB(255, 50, 50)
-            hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-            hl.FillTransparency = 0.5
-            hl.OutlineTransparency = 0
-            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            hl.Parent = esp
-
-            -- Wireframe box through walls (BoxHandleAdornment)
-            local boxAdorn = Instance.new("BoxHandleAdornment")
-            boxAdorn.Name = "ESP_Box"
-            boxAdorn.Size = Vector3.new(3.2, 3.2, 3.2)
-            boxAdorn.Color3 = Color3.fromRGB(255, 0, 0)
-            boxAdorn.Transparency = 0.25
-            boxAdorn.AlwaysOnTop = true
-            boxAdorn.ZIndex = 10
-            boxAdorn.Adornee = esp
-            boxAdorn.Parent = esp
-
-            Cache.BuildTargetESP = esp
-        end
                 
         if not Cache.LoadedBlueprintData then Window:Notify({Title="Error",Content="No blueprint loaded. Select one from the dropdown or use Resume to load saved progress.",Duration=3}); State.AutoBlueprintEnabled=false; return end
         State.BlueprintGen += 1; local gen = State.BlueprintGen
         State.BlueprintPaused = false
         State.BlueprintPlacedCount = State.BlueprintPlacedCount or 0
-        State.CurrentBuildTargetKey = nil
-        State.CurrentBuildTargetPos = nil
         addloop(task.spawn(function()
             local startCF = getblueprintstartcframe()
             local bpData = Cache.LoadedBlueprintData
@@ -4723,8 +4437,6 @@ BuildTab:CreateToggle({ Name="Auto Build Blueprint", CurrentValue=false, Callbac
                     local posKey = string.format("%d,%d,%d", floor(pos.X*10), floor(pos.Y*10), floor(pos.Z*10))
                     if not Cache.BlueprintPlaced[posKey] then
                         local d = playerPos - pos; local dsq = d.X*d.X + d.Y*d.Y + d.Z*d.Z
-                    local maxDsq = (Settings.BuildRadius or 150) ^ 2
-                    if dsq > maxDsq then continue end  -- ignore blocks outside chosen radius
                         -- Add ALL blocks to queue, sorted by distance (closest first)
                         insert(queue, {cframe=targetCF, blockType=bt, dsq=dsq})
                         currentInv[bt] = (currentInv[bt] or 0) - 1
@@ -4739,33 +4451,11 @@ BuildTab:CreateToggle({ Name="Auto Build Blueprint", CurrentValue=false, Callbac
                         if not State.AutoBlueprintEnabled or gen ~= State.BlueprintGen then break end
                         if State.BlueprintPaused then task.wait(0.5); break end
 
+                        -- Skip blocks that are too far (150 studs), but keep them in queue for next cycle
+                        if bd.dsq >= 22500 then continue end
+
                         local posKey = string.format("%d,%d,%d", floor(bd.cframe.X*10), floor(bd.cframe.Y*10), floor(bd.cframe.Z*10))
                         if Cache.BlueprintPlaced[posKey] then continue end
-
-                        -- Update target ESP and state
-                        State.CurrentBuildTargetKey = posKey
-                        State.CurrentBuildTargetPos = bd.cframe.Position
-                        if Cache.BuildTargetESP and State.BlockPlacingESPEnabled then
-                            pcall(function() Cache.BuildTargetESP.CFrame = bd.cframe end)
-                        end
-
-                        -- Check if this spot is already filled in the world (fixes rejoins)
-                        local isFilled, _ = filledcheck(bd.cframe.Position)
-                        if isFilled then
-                            if not Cache.BlueprintPlaced[posKey] then
-                                Cache.BlueprintPlaced[posKey] = true
-                                Cache.BlueprintPlacedCount += 1
-                                if Cache.BuildProgressLabel then
-                                    Cache.BuildProgressLabel.Text = Cache.BlueprintPlacedCount .. " / " .. totalBlocks .. " blocks"
-                                end
-                            end
-                            continue
-                        end
-
-                        -- If nearest block is too far AND unfilled, stop looking further
-                        if bd.dsq >= 22500 then
-                            break
-                        end
 
                         task.spawn(function()
                             local success, result = pcall(function()
@@ -4783,6 +4473,10 @@ BuildTab:CreateToggle({ Name="Auto Build Blueprint", CurrentValue=false, Callbac
                         placedInCycle += 1
                         task.wait(Delay.BuildSpeed)
                     end
+                    -- If no blocks were placed in this cycle (all too far), wait less time before retrying
+                    if placedInCycle == 0 then
+                        task.wait(0.5)
+                    end
                 else
                     task.wait(2)
                 end
@@ -4793,96 +4487,9 @@ BuildTab:CreateToggle({ Name="Auto Build Blueprint", CurrentValue=false, Callbac
         saveblueprintstate()
         State.BlueprintPaused = false
         if Cache.BuildProgressMainFrame then Cache.BuildProgressMainFrame.Visible = false end
-        if Cache.BuildTargetESP then pcall(function() Cache.BuildTargetESP:Destroy() end); Cache.BuildTargetESP = nil end
-        State.CurrentBuildTargetKey = nil
-        State.CurrentBuildTargetPos = nil
     end
 end})
 BuildTab:CreateSlider({ Name="Build Speed", Step=0.01, Range={0.01,0.5}, Increment=0.01, Suffix="s", CurrentValue=Delay.BuildSpeed, Callback=function(v) Delay.BuildSpeed = v end})
-BuildTab:CreateSlider({ Name="Build Radius", Step=5, Range={10,500}, Increment=5, Suffix=" studs", CurrentValue=Settings.BuildRadius, Callback=function(v) Settings.BuildRadius = v end})
-BuildTab:CreateToggle({ Name="Block Placing ESP", CurrentValue=true, Callback=function(v)
-    State.BlockPlacingESPEnabled = v
-    if not v then
-        if Cache.BuildTargetESP then
-            pcall(function() Cache.BuildTargetESP:Destroy() end)
-            Cache.BuildTargetESP = nil
-        end
-    elseif v and State.AutoBlueprintEnabled then
-        if not Cache.BuildTargetESP or not Cache.BuildTargetESP.Parent then
-            local esp = Instance.new("Part")
-            esp.Name = "BuildTargetESP"
-            esp.Size = Vector3.new(3.2, 3.2, 3.2)
-            esp.Anchored = true
-            esp.CanCollide = false
-            esp.CanQuery = false
-            esp.CanTouch = false
-            esp.Transparency = 1
-            esp.Color = Color3.fromRGB(255, 0, 0)
-            esp.Material = Enum.Material.Neon
-            esp.Parent = Workspace
-
-            local billboard = Instance.new("BillboardGui")
-            billboard.Name = "ESP_Billboard"
-            billboard.Size = UDim2.new(0, 28, 0, 28)
-            billboard.AlwaysOnTop = true
-            billboard.StudsOffset = Vector3.new(0, 0, 0)
-            billboard.Parent = esp
-
-            local frame = Instance.new("Frame")
-            frame.Name = "ESP_Frame"
-            frame.Size = UDim2.new(1, 0, 1, 0)
-            frame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            frame.BorderSizePixel = 0
-            frame.Parent = billboard
-
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(1, 0)
-            corner.Parent = frame
-
-            local stroke = Instance.new("UIStroke")
-            stroke.Color = Color3.fromRGB(255, 255, 255)
-            stroke.Thickness = 2.5
-            stroke.Parent = frame
-
-            local hl = Instance.new("Highlight")
-            hl.Name = "ESP_Highlight"
-            hl.Adornee = esp
-            hl.FillColor = Color3.fromRGB(255, 50, 50)
-            hl.OutlineColor = Color3.fromRGB(255, 0, 0)
-            hl.FillTransparency = 0.5
-            hl.OutlineTransparency = 0
-            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            hl.Parent = esp
-
-            local boxAdorn = Instance.new("BoxHandleAdornment")
-            boxAdorn.Name = "ESP_Box"
-            boxAdorn.Size = Vector3.new(3.2, 3.2, 3.2)
-            boxAdorn.Color3 = Color3.fromRGB(255, 0, 0)
-            boxAdorn.Transparency = 0.25
-            boxAdorn.AlwaysOnTop = true
-            boxAdorn.ZIndex = 10
-            boxAdorn.Adornee = esp
-            boxAdorn.Parent = esp
-
-            Cache.BuildTargetESP = esp
-        end
-    end
-end})
-BuildTab:CreateButton({ Name="Skip Current Block", Callback=function()
-    if State.AutoBlueprintEnabled and State.CurrentBuildTargetKey then
-        if not Cache.BlueprintPlaced[State.CurrentBuildTargetKey] then
-            Cache.BlueprintPlaced[State.CurrentBuildTargetKey] = true
-            Cache.BlueprintPlacedCount += 1
-            if Cache.BuildProgressLabel and Cache.LoadedBlueprintData then
-                Cache.BuildProgressLabel.Text = Cache.BlueprintPlacedCount .. " / " .. #Cache.LoadedBlueprintData .. " blocks"
-            end
-        end
-        State.CurrentBuildTargetKey = nil
-        Window:Notify({Title="Skipped", Content="Block skipped.", Duration=1})
-    else
-        Window:Notify({Title="Error", Content="No active build target to skip.", Duration=2})
-    end
-end})
 BuildTab:CreateDivider()
 BuildTab:CreateButton({ Name="Pause/Resume Build", Callback=function()
     if not State.AutoBlueprintEnabled then
@@ -4930,43 +4537,6 @@ BuildTab:CreateButton({ Name="Clear Saves", Callback=function()
     else
         Window:Notify({Title="Info", Content="No saved progress found.", Duration=3})
     end
-end})
-BuildTab:CreateButton({ Name="Scan & Sync Placed", Callback=function()
-    task.spawn(function()
-        if not Cache.LoadedBlueprintData then Window:Notify({Title="Error",Content="No blueprint loaded.",Duration=3}); return end
-        local startCF = getblueprintstartcframe()
-        local scanned = 0
-        for i, blockData in ipairs(Cache.LoadedBlueprintData) do
-            if i % 500 == 0 then task.wait() end
-            local bt = blockData.blockType
-            local relCF = parseBlueprintCFrame(blockData.cframe)
-            local targetCF = startCF * relCF
-            local pos = targetCF.Position
-            local posKey = string.format("%d,%d,%d", floor(pos.X*10), floor(pos.Y*10), floor(pos.Z*10))
-            if not Cache.BlueprintPlaced[posKey] then
-                local isFilled = filledcheck(pos)
-                if isFilled then
-                    Cache.BlueprintPlaced[posKey] = true
-                    Cache.BlueprintPlacedCount += 1
-                    scanned += 1
-                end
-            end
-        end
-        if Cache.BuildProgressLabel and Cache.LoadedBlueprintData then
-            Cache.BuildProgressLabel.Text = Cache.BlueprintPlacedCount .. " / " .. #Cache.LoadedBlueprintData .. " blocks"
-        end
-        savesyncstate()
-        Window:Notify({Title="Sync Complete", Content="Marked "..scanned.." already-placed blocks. Sync saved.", Duration=3})
-    end)
-end})
-BuildTab:CreateButton({ Name="Delete Sync Data", Callback=function()
-    deletesyncstate()
-    Cache.BlueprintPlaced = {}
-    Cache.BlueprintPlacedCount = 0
-    if Cache.BuildProgressLabel and Cache.LoadedBlueprintData then
-        Cache.BuildProgressLabel.Text = "0 / " .. #Cache.LoadedBlueprintData .. " blocks"
-    end
-    Window:Notify({Title="Sync Deleted", Content="Saved sync cleared and counters reset.", Duration=3})
 end})
 
 BuildTab:CreateSection("Block Replacement")
@@ -5067,199 +4637,6 @@ BuildTab:CreateButton({ Name="Clear Replacements", Callback=function()
     Window:Notify({Title="Cleared", Content="All replacements removed.", Duration=2})
 end})
 
-pcall(function()
-    BuildTab:CreateSection("Manage Blueprint & Sync Data")
-
-    local ManageBlueprintDD = BuildTab:CreateDropdown({ Name="Select Blueprint", Options=refreshblueprints(), CurrentOption={"None"}, Callback=function(v)
-        local val = type(v) == "table" and v[1] or v
-        State.ManageSelectedBlueprint = val
-    end})
-
-    BuildTab:CreateButton({ Name="Refresh Blueprints", Callback=function()
-        local bps = refreshblueprints()
-        if BlueprintDD then
-            BlueprintDD:Refresh(bps, State.SelectedBlueprint)
-        end
-        if ManageBlueprintDD then
-            ManageBlueprintDD:Refresh(bps, State.ManageSelectedBlueprint)
-        end
-        Window:Notify({Title="Refreshed", Content="Blueprint list updated.", Duration=2})
-    end})
-
-    _G.IVM_ManageUI = _G.IVM_ManageUI or {}
-    _G.IVM_ManageUI.DelSel = {confirming = false, resetThread = nil}
-    _G.IVM_ManageUI.DelAll = {confirming = false, resetThread = nil}
-
-    local function resetDelSel()
-        local s = _G.IVM_ManageUI.DelSel
-        s.confirming = false
-        s.resetThread = nil
-        if s.btn then
-            s.btn.BackgroundColor3 = UI.Colors.Element
-            if s.label then s.label.Text = "Delete Selected Blueprint" end
-        end
-    end
-
-    local function resetDelAll()
-        local s = _G.IVM_ManageUI.DelAll
-        s.confirming = false
-        s.resetThread = nil
-        if s.btn then
-            s.btn.BackgroundColor3 = UI.Colors.Element
-            if s.label then s.label.Text = "Delete All Blueprints" end
-        end
-    end
-
-    _G.IVM_ManageUI.DelSel.btn = BuildTab:CreateButton({ Name="Delete Selected Blueprint", Callback=function()
-        local s = _G.IVM_ManageUI.DelSel
-        if not s.confirming then
-            s.confirming = true
-            if s.btn then
-                s.btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                if s.label then s.label.Text = "Confirm?" end
-            end
-            if s.resetThread then task.cancel(s.resetThread) end
-            s.resetThread = task.delay(10, resetDelSel)
-            return
-        end
-
-        if s.resetThread then task.cancel(s.resetThread) end
-        resetDelSel()
-
-        local name = State.ManageSelectedBlueprint
-        if not name or name == "None" then
-            Window:Notify({Title="Error", Content="No blueprint selected.", Duration=2})
-            return
-        end
-
-        if not (isfolder and makefolder and isfile and readfile and writefile and delfile) then
-            Window:Notify({Title="Error", Content="Filesystem not supported.", Duration=2})
-            return
-        end
-
-        local src = "Error404/Blueprints/" .. name .. ".json"
-        if not isfile(src) then
-            Window:Notify({Title="Error", Content="Blueprint not found.", Duration=2})
-            return
-        end
-
-        local trashFolder = "Error404/Trash"
-        if not isfolder(trashFolder) then makefolder(trashFolder) end
-
-        local ok, data = pcall(function() return readfile(src) end)
-        if not ok then
-            Window:Notify({Title="Error", Content="Failed to read blueprint.", Duration=2})
-            return
-        end
-
-        local trashName = name .. "_bp.json"
-        local trashPath = trashFolder .. "/" .. trashName
-        local counter = 2
-        while isfile(trashPath) do
-            trashName = name .. "_bp" .. counter .. ".json"
-            trashPath = trashFolder .. "/" .. trashName
-            counter = counter + 1
-        end
-
-        local ok2 = pcall(function() writefile(trashPath, data) end)
-        if not ok2 then
-            Window:Notify({Title="Error", Content="Failed to write to trash.", Duration=2})
-            return
-        end
-
-        pcall(function() delfile(src) end)
-
-        local bps = refreshblueprints()
-        if BlueprintDD then BlueprintDD:Refresh(bps, State.SelectedBlueprint) end
-        if ManageBlueprintDD then ManageBlueprintDD:Refresh(bps, "None") end
-        State.ManageSelectedBlueprint = "None"
-
-        Window:Notify({Title="Deleted", Content="Moved " .. name .. " to trash.", Duration=3})
-    end})
-
-    if _G.IVM_ManageUI.DelSel.btn then
-        for _, child in ipairs(_G.IVM_ManageUI.DelSel.btn:GetChildren()) do
-            if child:IsA("TextLabel") then
-                _G.IVM_ManageUI.DelSel.label = child
-                break
-            end
-        end
-    end
-
-    _G.IVM_ManageUI.DelAll.btn = BuildTab:CreateButton({ Name="Delete All Blueprints", Callback=function()
-        local s = _G.IVM_ManageUI.DelAll
-        if not s.confirming then
-            s.confirming = true
-            if s.btn then
-                s.btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                if s.label then s.label.Text = "Confirm?" end
-            end
-            if s.resetThread then task.cancel(s.resetThread) end
-            s.resetThread = task.delay(10, resetDelAll)
-            return
-        end
-
-        if s.resetThread then task.cancel(s.resetThread) end
-        resetDelAll()
-
-        if not (isfolder and makefolder and isfile and readfile and writefile and delfile and listfiles) then
-            Window:Notify({Title="Error", Content="Filesystem not supported.", Duration=2})
-            return
-        end
-
-        local bpFolder = "Error404/Blueprints"
-        if not isfolder(bpFolder) then
-            Window:Notify({Title="Error", Content="No blueprints folder found.", Duration=2})
-            return
-        end
-
-        local files = listfiles(bpFolder)
-        local moved = 0
-        local trashFolder = "Error404/Trash"
-        if not isfolder(trashFolder) then makefolder(trashFolder) end
-
-        for _, f in ipairs(files) do
-            local fname = f:match("([^/\\]+)%.json$")
-            if fname then
-                local ok, data = pcall(function() return readfile(f) end)
-                if ok then
-                    local trashName = fname .. "_bp.json"
-                    local trashPath = trashFolder .. "/" .. trashName
-                    local counter = 2
-                    while isfile(trashPath) do
-                        trashName = fname .. "_bp" .. counter .. ".json"
-                        trashPath = trashFolder .. "/" .. trashName
-                        counter = counter + 1
-                    end
-                    pcall(function() writefile(trashPath, data) end)
-                    pcall(function() delfile(f) end)
-                    moved = moved + 1
-                end
-            end
-        end
-
-        local bps = refreshblueprints()
-        if BlueprintDD then BlueprintDD:Refresh(bps, "None") end
-        if ManageBlueprintDD then ManageBlueprintDD:Refresh(bps, "None") end
-        State.ManageSelectedBlueprint = "None"
-        if State.SelectedBlueprint ~= "None" then
-            State.SelectedBlueprint = "None"
-            Cache.LoadedBlueprintData = nil
-        end
-
-        Window:Notify({Title="Deleted", Content="Moved " .. moved .. " blueprint(s) to trash.", Duration=3})
-    end})
-
-    if _G.IVM_ManageUI.DelAll.btn then
-        for _, child in ipairs(_G.IVM_ManageUI.DelAll.btn:GetChildren()) do
-            if child:IsA("TextLabel") then
-                _G.IVM_ManageUI.DelAll.label = child
-                break
-            end
-        end
-    end
-end)
-
 -- misc stuff
 MiscTab:CreateSection("Utilities")
 MiscTab:CreateToggle({ Name="Anti AFK", CurrentValue=true, Callback=function(v)
@@ -5348,112 +4725,6 @@ MiscTab:CreateButton({ Name="View Inventory", Callback=function()
         })
         Cache.MountedInventoryView = Roact.mount(app, LocalPlayer:WaitForChild("PlayerGui"))
     end)
-end})
-
-
-MiscTab:CreateSection("Character")
-
--- Float (infinite yield style floating platform)
-local FloatPart = nil
-local FloatConn = nil
-MiscTab:CreateToggle({ Name="Float", CurrentValue=false, Callback=function(v)
-    if v then
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            FloatPart = Instance.new("Part")
-            FloatPart.Name = "IVM_Float"
-            FloatPart.Size = Vector3.new(6, 1, 6)
-            FloatPart.Anchored = true
-            FloatPart.CanCollide = true
-            FloatPart.Transparency = 1
-            FloatPart.Parent = Workspace
-            FloatConn = RunService.Heartbeat:Connect(function()
-                if not FloatPart then return end
-                local c = LocalPlayer.Character
-                local h = c and c:FindFirstChild("HumanoidRootPart")
-                if h then
-                    FloatPart.CFrame = CFrame.new(h.Position.X, h.Position.Y - 3.5, h.Position.Z)
-                end
-            end)
-        end
-    else
-        if FloatConn then FloatConn:Disconnect(); FloatConn = nil end
-        if FloatPart then FloatPart:Destroy(); FloatPart = nil end
-    end
-end})
-
--- WalkSpeed
-MiscTab:CreateSlider({ Name="WalkSpeed", Step=1, Range={16,150}, Increment=1, Suffix="", CurrentValue=16, Callback=function(v)
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if hum then hum.WalkSpeed = v end
-end})
-
--- Fly
-local FlyEnabled = false
-local FlyConn = nil
-MiscTab:CreateToggle({ Name="Fly", CurrentValue=false, Callback=function(v)
-    FlyEnabled = v
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    if v then
-        local bg = Instance.new("BodyGyro"); bg.Name = "IVM_FlyGyro"
-        bg.P = 9e4; bg.MaxTorque = Vector3.new(9e9,9e9,9e9); bg.CFrame = hrp.CFrame; bg.Parent = hrp
-        local bv = Instance.new("BodyVelocity"); bv.Name = "IVM_FlyVel"
-        bv.Velocity = Vector3.zero; bv.MaxForce = Vector3.new(9e9,9e9,9e9); bv.Parent = hrp
-        FlyConn = RunService.RenderStepped:Connect(function()
-            if not FlyEnabled then return end
-            local c = LocalPlayer.Character
-            local h = c and c:FindFirstChild("HumanoidRootPart")
-            if not h then return end
-            local cam = Workspace.CurrentCamera
-            local dir = Vector3.zero
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir -= Vector3.new(0,1,0) end
-            local speed = 50
-            if dir.Magnitude > 0 then dir = dir.Unit * speed end
-            local bv2 = h:FindFirstChild("IVM_FlyVel")
-            if bv2 then bv2.Velocity = dir end
-            local bg2 = h:FindFirstChild("IVM_FlyGyro")
-            if bg2 then bg2.CFrame = cam.CFrame end
-        end)
-    else
-        if FlyConn then FlyConn:Disconnect(); FlyConn = nil end
-        local bv = hrp:FindFirstChild("IVM_FlyVel"); if bv then bv:Destroy() end
-        local bg = hrp:FindFirstChild("IVM_FlyGyro"); if bg then bg:Destroy() end
-    end
-end})
-
--- NoClip
-local MiscNoclipEnabled = false
-local MiscNoclipConn = nil
-MiscTab:CreateToggle({ Name="NoClip", CurrentValue=false, Callback=function(v)
-    MiscNoclipEnabled = v
-    if v then
-        MiscNoclipConn = RunService.Stepped:Connect(function()
-            if not MiscNoclipEnabled then return end
-            local char = LocalPlayer.Character
-            if char then
-                for _, p in ipairs(char:GetDescendants()) do
-                    if p:IsA("BasePart") then p.CanCollide = false end
-                end
-            end
-        end)
-    else
-        if MiscNoclipConn then MiscNoclipConn:Disconnect(); MiscNoclipConn = nil end
-        local char = LocalPlayer.Character
-        if char then
-            for _, p in ipairs(char:GetDescendants()) do
-                if p:IsA("BasePart") then p.CanCollide = true end
-            end
-        end
-    end
 end})
 
 MiscTab:CreateSection("Labels")
@@ -5699,7 +4970,6 @@ SettingsTab:CreateButton({ Name="Unload Script", Callback=function()
     if Cache.BlueprintRegionSB then Cache.BlueprintRegionSB:Destroy(); Cache.BlueprintRegionSB = nil end
     if Cache.BlueprintRegionPart then Cache.BlueprintRegionPart:Destroy(); Cache.BlueprintRegionPart = nil end
     if Cache.BlueprintLoadThread then pcall(function() task.cancel(Cache.BlueprintLoadThread) end); Cache.BlueprintLoadThread = nil end
-    if Cache.BuildTargetESP then pcall(function() Cache.BuildTargetESP:Destroy() end); Cache.BuildTargetESP = nil end
     if TreeAuraThread then pcall(function() task.cancel(TreeAuraThread) end); TreeAuraThread = nil end
     teardownNoclip()
     State.TreeAuraEnabled = false
@@ -5860,9 +5130,6 @@ local function DoFullCleanup()
     if Cache.BlueprintRegionHL then pcall(function() Cache.BlueprintRegionHL:Destroy() end); Cache.BlueprintRegionHL = nil end
     if Cache.BlueprintRegionSB then pcall(function() Cache.BlueprintRegionSB:Destroy() end); Cache.BlueprintRegionSB = nil end
     if Cache.BlueprintRegionPart then pcall(function() Cache.BlueprintRegionPart:Destroy() end); Cache.BlueprintRegionPart = nil end
-    if Cache.BuildTargetESP then pcall(function() Cache.BuildTargetESP:Destroy() end); Cache.BuildTargetESP = nil end
-    State.CurrentBuildTargetKey = nil
-    State.CurrentBuildTargetPos = nil
     for b, d in pairs(Cache.SpecificSelection) do
         if d and d.highlight then pcall(function() d.highlight:Destroy() end) end
     end
