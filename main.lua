@@ -3205,6 +3205,91 @@ end
 task.defer(createrequiredblocksui)
 task.defer(createmovementui)
 
+-- popup that contains the extra sub-tabs (Blueprints, Preview, Island Edits, Movement)
+local function createMoreUI()
+    pcall(function()
+        if Cache.MoreUI and Cache.MoreUI.Parent then Cache.MoreUI:Destroy() end
+    end)
+    local ui, frame = buildFrameBase("IVM_MoreUI", UDim2.new(0,420,0,320), UDim2.new(0.5,-210,0.5,-160))
+    frame.Visible = true
+
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Name = "Sidebar"
+    Sidebar.Size = UDim2.new(0,120,1,0)
+    Sidebar.Position = UDim2.new(0,0,0,0)
+    Sidebar.BackgroundColor3 = UI.Colors.Sidebar
+    Sidebar.BorderSizePixel = 0
+    Sidebar.Parent = frame
+    Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0,6)
+
+    local Content = Instance.new("Frame")
+    Content.Name = "Content"
+    Content.Size = UDim2.new(1,-120,1,0)
+    Content.Position = UDim2.new(0,120,0,0)
+    Content.BackgroundColor3 = UI.Colors.Element
+    Content.BorderSizePixel = 0
+    Content.Parent = frame
+    Instance.new("UICorner", Content).CornerRadius = UDim.new(0,6)
+
+    local pages = {}
+    local function makePage(name)
+        local p = Instance.new("Frame")
+        p.Name = name:gsub('%s+','') .. "Page"
+        p.Size = UDim2.new(1,0,1,0)
+        p.Position = UDim2.new(0,0,0,0)
+        p.BackgroundTransparency = 1
+        p.Parent = Content
+        p.Visible = false
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1,-20,0,24)
+        lbl.Position = UDim2.new(0,10,0,8)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = name
+        lbl.TextColor3 = UI.Colors.Text
+        lbl.Font = UI.FontBold
+        lbl.TextSize = 14
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = p
+        pages[name] = p
+        return p
+    end
+
+    local function activatePage(name)
+        for k,v in pairs(pages) do pcall(function() v.Visible = false end) end
+        if pages[name] then pages[name].Visible = true end
+    end
+
+    local tabNames = {"Blueprints","Preview","Island Edits","Movement"}
+    for i, name in ipairs(tabNames) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1,-16,0,40)
+        btn.Position = UDim2.new(0,8,0,8 + (i-1) * 45)
+        btn.BackgroundColor3 = UI.Colors.Element
+        btn.BorderSizePixel = 0
+        btn.Text = name
+        btn.Font = UI.Font
+        btn.TextColor3 = UI.Colors.Text
+        btn.TextSize = 14
+        btn.Parent = Sidebar
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+
+        makePage(name)
+
+        btn.MouseButton1Click:Connect(function()
+            activatePage(name)
+            -- open existing movement UI when Movement tab clicked
+            if name == "Movement" then
+                State.ShowMovementUI = true
+                if Cache.MovementFrame then Cache.MovementFrame.Visible = true end
+            end
+        end)
+    end
+
+    activatePage("Blueprints")
+    Cache.MoreUI = frame
+    return frame
+end
+
 -- setting up all the tabs on the side
 local VendingTab     = Window:CreateTab("Vending",      GetIcon("store"),         1)
 local ChestTab       = Window:CreateTab("Chest",        GetIcon("archive"),       2)
@@ -3416,6 +3501,9 @@ VendingTab:CreateDivider()
 VendingTab:CreateInput({ Name="Item Amount", PlaceholderText="e.g. 100", Callback=function(v) State.ItemAmountValue = v end})
 VendingTab:CreateDropdown({ Name="Item Mode", Options={"Deposit","Withdraw","Deposit (Max)","Withdraw (Max)"}, CurrentOption={"Deposit"}, Callback=function(v) State.ItemMode = type(v) == "table" and v[1] or v end})
 VendingTab:CreateDivider()
+    VendingTab:CreateButton({ Name="More UI", Callback=function()
+        createMoreUI()
+    end})
 VendingTab:CreateButton({ Name="Perform Item Action", Callback=function()
     task.spawn(function()
         local item = State.SelectedVendItem; local amount = tonumber(State.ItemAmountValue)
