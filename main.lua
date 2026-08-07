@@ -1,34 +1,4 @@
 -- TODO: add totem upgrader
-warn("Error404: script started")
-print("Error404: script started")
-
-local function ShowExecutionIndicator()
-    pcall(function()
-        local gui = (gethui and gethui() or game:GetService("CoreGui"))
-        if not gui then return end
-        local frame = Instance.new("Frame")
-        frame.Name = "Error404ExecutionIndicator"
-        frame.Size = UDim2.new(0,240,0,36)
-        frame.Position = UDim2.new(0,0,0,0)
-        frame.BackgroundColor3 = Color3.fromRGB(30,30,36)
-        frame.BackgroundTransparency = 0.15
-        frame.BorderSizePixel = 0
-        frame.ZIndex = 10000
-        frame.Parent = gui
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1,1,1,1)
-        label.BackgroundTransparency = 1
-        label.Text = "Error404 script started"
-        label.TextColor3 = Color3.fromRGB(255,255,255)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 13
-        label.Parent = frame
-        task.delay(5, function()
-            if frame and frame.Parent then pcall(function() frame:Destroy() end) end
-        end)
-    end)
-end
-ShowExecutionIndicator()
 
 -- folder stuff
 if isfolder and makefolder then
@@ -89,7 +59,6 @@ local Mouse = LocalPlayer:GetMouse()
 
 -- builds the main window and its draggable behaviour
 function Library:Create(titleText)
-    print("Error404: Library.Create start", titleText)
     local ActiveConnections, ActiveLoops = {}, {}
     local function AddConn(Conn) table.insert(ActiveConnections, Conn); return Conn end
     local function AddLoop(Thread) table.insert(ActiveLoops, Thread); return Thread end
@@ -393,11 +362,9 @@ function Library:Create(titleText)
     function Window:SetHovering(s) IsHovering = s end
 
     -- creates a new tab and returns an object with methods to add ui elements
-    function Window:CreateTab(Name, Icon, Order)
-        print("Error404: CreateTab", Name, Icon, Order)
-        local sanitizedName = Name:gsub("%s+", "")
+    function Window:CreateTab(Name, Icon)
         local Page = Instance.new("ScrollingFrame")
-        Page.Name = sanitizedName .. "Page"
+        Page.Name = Name .. "Page"
         Page.Size = UDim2.new(1,-20,1,-10)
         Page.Position = UDim2.new(0,10,0,10)
         Page.BackgroundTransparency = 1
@@ -405,7 +372,7 @@ function Library:Create(titleText)
         Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
         Page.ScrollBarImageColor3 = Color3.fromRGB(60,60,65)
         Page.BorderSizePixel = 0
-        Page.Visible = false
+Page.Visible = false
         Page.BackgroundTransparency = 1
         Page.Parent = ContentArea
 
@@ -419,8 +386,7 @@ function Library:Create(titleText)
         PagePadding.Parent = Page
 
         local TabButton = Instance.new("TextButton")
-        TabButton.Name = sanitizedName .. "Tab"
-        TabButton.LayoutOrder = Order or #Tabs + 1
+        TabButton.Name = Name .. "Tab"
         TabButton.Size = UDim2.new(1,-20,0,42)
         TabButton.BackgroundColor3 = UI.Colors.Sidebar
         TabButton.BackgroundTransparency = 1
@@ -470,17 +436,11 @@ function Library:Create(titleText)
             Page.Position = UDim2.new(0,10,0,40)
             TweenService:Create(Page, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
                 { Position = UDim2.new(0,10,0,10) }):Play()
-            print("Error404: Activating tab", Name)
             SetTabColor(true)
-            -- Use layout-order + known constants rather than AbsolutePosition to avoid
-            -- timing/layout race conditions on mobile/executor environments.
-            local buttonIndex = TabButton.LayoutOrder or 1
-            local buttonHeight = 42
-            local listPadding = 5
-            local buttonRelY = (buttonIndex - 1) * (buttonHeight + listPadding)
-            local targetY_normal = buttonRelY + (buttonHeight - 24) / 2
-            local targetY_stretch = buttonRelY + (buttonHeight - 32) / 2
-            if FirstTab then
+            local buttonRelY = TabButton.AbsolutePosition.Y - TabList.AbsolutePosition.Y
+            local targetY_normal = buttonRelY + (TabButton.AbsoluteSize.Y - 24) / 2
+            local targetY_stretch = buttonRelY + (TabButton.AbsoluteSize.Y - 32) / 2
+if FirstTab then
                 ActiveTabIndicator.Position = UDim2.new(0,0,0,targetY_normal)
             else
                 -- Pulse animation: stretch longer then return to normal
@@ -501,21 +461,7 @@ function Library:Create(titleText)
         TabButton.MouseButton1Click:Connect(Activate)
         table.insert(Pages, Page)
         table.insert(Tabs, { Btn = TabButton, Icon = TabIcon })
-        if FirstTab then
-            Page.Visible = true
-            CurrentTab = TabButton
-            SetTabColor(true)
-            task.spawn(function()
-                task.wait(0.05)
-                -- compute indicator position using LayoutOrder instead of AbsolutePosition
-                local buttonIndex = TabButton.LayoutOrder or 1
-                local buttonHeight = 42
-                local listPadding = 5
-                local buttonRelY = (buttonIndex - 1) * (buttonHeight + listPadding)
-                ActiveTabIndicator.Position = UDim2.new(0,0,0,buttonRelY + (buttonHeight - 24) / 2)
-            end)
-            FirstTab = false
-        end
+        if FirstTab then task.defer(Activate); Activate(); FirstTab = false end -- activate the first tab right away
 
         local TabObj = { Page = Page }
 
@@ -996,7 +942,6 @@ local Open = false
     Window.ActiveConnections = ActiveConnections
     Window.ActiveLoops = ActiveLoops
     Window.ScreenGui = ScreenGui
-    print("Error404: Library.Create returning Window")
     
     return Window
 end
@@ -1014,10 +959,6 @@ local LucideIcons = {
     ["package-open"] = "rbxassetid://107788271669717",
     ["wrench"]       = "rbxassetid://72256665561111",
     ["settings"]     = "rbxassetid://80569709228497",
-    ["blueprints"]   = "rbxassetid://92880735001078",
-    ["preview"]      = "rbxassetid://102434991552616",
-    ["island-edits"] = "rbxassetid://88877559549936",
-    ["movement"]     = "rbxassetid://101926214741105",
 }
 
 local function GetIcon(name)
@@ -2944,10 +2885,7 @@ end)
 task.spawn(function() task.wait(1); updateBlocksFolder() end)
 
 -- setting up the main window
-print("Error404: before Library.Create")
 local Window = Library:Create("Error 404's")
-print("Error404: after Library.Create", tostring(Window))
-warn("Error404: Window created")
 Window:Notify({ Title = "Error 404's", Content = "Thanks for choosing Error 404's.", Duration = 3 })
 
 -- Toggle UI button
@@ -3206,21 +3144,16 @@ task.defer(createrequiredblocksui)
 task.defer(createmovementui)
 
 -- setting up all the tabs on the side
-local VendingTab     = Window:CreateTab("Vending",      GetIcon("store"),         1)
-local ChestTab       = Window:CreateTab("Chest",        GetIcon("archive"),       2)
-local ATMTab         = Window:CreateTab("ATM",          GetIcon("landmark"),      3)
-local BlueprintsTab  = Window:CreateTab("Blueprints",   GetIcon("blueprints"),    4)
-local PreviewTab     = Window:CreateTab("Preview",      GetIcon("preview"),       5)
-local BuildTab       = Window:CreateTab("Build",        GetIcon("construction"),  6)
-local IslandEditsTab = Window:CreateTab("Island Edits", GetIcon("island-edits"),  7)
-local MovementTab    = Window:CreateTab("Movement",     GetIcon("movement"),      8)
-local SniperTab      = Window:CreateTab("Sniper",       GetIcon("crosshair"),     9)
-local CombatTab      = Window:CreateTab("Combat",       GetIcon("swords"),       10)
-local FarmingTab     = Window:CreateTab("Farming",      GetIcon("sprout"),       11)
-local OpeningTab     = Window:CreateTab("Opening",      GetIcon("package-open"), 12)
-local MiscTab        = Window:CreateTab("Misc",         GetIcon("wrench"),       13)
-local SettingsTab    = Window:CreateTab("Settings",     GetIcon("settings"),     14)
-print("Error404: all tabs created")
+local VendingTab  = Window:CreateTab("Vending",  GetIcon("store"))
+local ChestTab    = Window:CreateTab("Chest",    GetIcon("archive"))
+local ATMTab      = Window:CreateTab("ATM",      GetIcon("landmark"))
+local BuildTab    = Window:CreateTab("Build",    GetIcon("construction"))
+local SniperTab   = Window:CreateTab("Sniper",   GetIcon("crosshair"))
+local CombatTab   = Window:CreateTab("Combat",   GetIcon("swords"))
+local FarmingTab  = Window:CreateTab("Farming",  GetIcon("sprout"))
+local OpeningTab  = Window:CreateTab("Opening",  GetIcon("package-open"))
+local MiscTab     = Window:CreateTab("Misc",     GetIcon("wrench"))
+local SettingsTab = Window:CreateTab("Settings", GetIcon("settings"))
 
 -- a dropdown menu where u can pick multiple things
 local function CreateMultiDropdown(tabObj, props)
